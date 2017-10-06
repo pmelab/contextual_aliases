@@ -1,0 +1,11 @@
+<?php
+
+function contextual_aliases_schema_alter(&$schema) {
+  $schema['url_alias']['fields']['context'] = [
+    'description' => "The context for this alias..",
+    'type' => 'varchar_ascii',
+    'length' => 12,
+    'not null' => TRUE,
+    'default' => '',
+  ];
+}

@@ -1,0 +1,4 @@
+name: Contextual Aliases
+type: module
+description: 'Add the same alias for different contexts.'
+core: 8.x
