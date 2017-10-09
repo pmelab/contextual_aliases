@@ -1,11 +1,16 @@
 <?php
 
-function contextual_aliases_schema_alter(&$schema) {
-  $schema['url_alias']['fields']['context'] = [
+use Drupal\Core\Database\Database;
+
+function contextual_aliases_install() {
+  $spec = array(
     'description' => "The context for this alias..",
     'type' => 'varchar_ascii',
-    'length' => 12,
-    'not null' => TRUE,
-    'default' => '',
-  ];
+    'length' => 32,
+    'not null' => FALSE,
+  );
+  $schema = Database::getConnection()->schema();
+  $schema->addField('url_alias', 'context', $spec);
+
+  // TODO: Add context to indexes.
 }

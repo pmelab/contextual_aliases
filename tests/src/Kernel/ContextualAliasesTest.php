@@ -77,6 +77,8 @@ class ContextualAliasesTest extends KernelTestBase {
     $whitelist->get(Argument::any())->willReturn(TRUE);
     $this->container->set('path.alias_whitelist', $whitelist->reveal());
     $this->installSchema('system', 'url_alias');
+    module_load_include('install', 'contextual_aliases', 'contextual_aliases');
+    contextual_aliases_install();
   }
 
   public function testServiceInjection() {
@@ -108,10 +110,9 @@ class ContextualAliasesTest extends KernelTestBase {
     // If there is no context, the alias should not be found.
     $this->resolver->getCurrentContext()->willReturn(NULL);
 
-    // For unknown aliases, getPathByAlias will return the alias itself.
-    $this->assertEquals('/b', $manager->getPathByAlias('/b'));
-    // There should be no alias, and therefore the path is returned.
-    $this->assertEquals('/a', $manager->getAliasByPath('/a'));
+    // If the current context is NULL, all aliases are taken into account.
+    $this->assertEquals('/a', $manager->getPathByAlias('/b'));
+    $this->assertEquals('/b', $manager->getAliasByPath('/a'));
   }
 
   public function testActiveContext() {
