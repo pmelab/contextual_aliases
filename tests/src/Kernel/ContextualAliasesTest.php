@@ -42,6 +42,13 @@ class ContextualAliasesTest extends KernelTestBase {
   protected $resolver;
 
   /**
+   * The alias manager.
+   *
+   * @var \Drupal\Core\Path\AliasManagerInterface
+   */
+  protected $manager;
+
+  /**
    * {@inheritdoc}
    */
   public function register(ContainerBuilder $container) {
@@ -79,57 +86,52 @@ class ContextualAliasesTest extends KernelTestBase {
     $this->installSchema('system', 'url_alias');
     module_load_include('install', 'contextual_aliases', 'contextual_aliases');
     contextual_aliases_install();
+
+    $this->resolver->resolveContext('/a')->willReturn('one');
+    $this->resolver->resolveContext('/b')->willReturn('two');
+    $this->resolver->resolveContext('/c')->willReturn(NULL);
+
+    $storage = $this->container->get('path.alias_storage');
+    $storage->save('/a', '/A', 'en');
+    $storage->save('/b', '/B', 'en');
+    $storage->save('/c', '/C', 'en');
+
+    $this->manager = $this->container->get('path.alias_manager');
   }
 
+  /**
+   * Test if service is injected properly.
+   */
   public function testServiceInjection() {
     $storage = $this->container->get('path.alias_storage');
     $this->assertInstanceOf(ContextualAliasStorage::class, $storage);
   }
 
-  public function testNoContext() {
+  public function testNoContextSimpleAlias() {
     $this->resolver->getCurrentContext()->willReturn(NULL);
-    $this->resolver->resolveContext(Argument::any())->willReturn(NULL);
-
-    $storage = $this->container->get('path.alias_storage');
-    $storage->save('/a', '/b', 'en');
-
-    $manager = $this->container->get('path.alias_manager');
-
-    $this->assertEquals('/a', $manager->getPathByAlias('/b'));
-    $this->assertEquals('/b', $manager->getAliasByPath('/a'));
+    $this->assertEquals('/c', $this->manager->getPathByAlias('/C'));
+    $this->assertEquals('/C', $this->manager->getAliasByPath('/c'));
   }
 
-  public function testInactiveContext() {
-    $this->resolver->resolveContext('/a')->willReturn('a');
-
-    $storage = $this->container->get('path.alias_storage');
-    $storage->save('/a', '/b', 'en');
-
-    $manager = $this->container->get('path.alias_manager');
-
-    // If there is no context, the alias should not be found.
+  public function testNoContextContextualAlias() {
     $this->resolver->getCurrentContext()->willReturn(NULL);
-
-    // If the current context is NULL, all aliases are taken into account.
-    $this->assertEquals('/a', $manager->getPathByAlias('/b'));
-    $this->assertEquals('/b', $manager->getAliasByPath('/a'));
+    $this->assertEquals('/A', $this->manager->getPathByAlias('/A'));
+    $this->assertEquals('/a', $this->manager->getPathByAlias('/one/A'));
+    $this->assertEquals('/one/A', $this->manager->getAliasByPath('/a'));
   }
 
-  public function testActiveContext() {
-    $this->resolver->resolveContext('/a')->willReturn('a');
+  public function testContextMatchingAlias() {
+    $this->resolver->getCurrentContext()->willReturn('one');
+    $this->assertEquals('/a', $this->manager->getPathByAlias('/A'));
+    $this->assertEquals('/a', $this->manager->getPathByAlias('/one/A'));
+    $this->assertEquals('/A', $this->manager->getAliasByPath('/a'));
+  }
 
-    $storage = $this->container->get('path.alias_storage');
-    $storage->save('/a', '/b', 'en');
-
-    $manager = $this->container->get('path.alias_manager');
-
-    // Now the proper aliased path for this context should be returned.
-    $this->resolver->getCurrentContext()->willReturn('a');
-
-    // For unknown aliases, getPathByAlias will return the alias itself.
-    $this->assertEquals('/a', $manager->getPathByAlias('/b'));
-    // There should be now
-    $this->assertEquals('/b', $manager->getAliasByPath('/a'));
+  public function testContextNotMatchingAlias() {
+    $this->resolver->getCurrentContext()->willReturn('two');
+    $this->assertEquals('/A', $this->manager->getPathByAlias('/A'));
+    $this->assertEquals('/a', $this->manager->getPathByAlias('/one/A'));
+    $this->assertEquals('/one/A', $this->manager->getAliasByPath('/a'));
   }
 
 }
