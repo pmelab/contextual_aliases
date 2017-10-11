@@ -90,11 +90,15 @@ class ContextualAliasesTest extends KernelTestBase {
     $this->resolver->resolveContext('/a')->willReturn('one');
     $this->resolver->resolveContext('/b')->willReturn('two');
     $this->resolver->resolveContext('/c')->willReturn(NULL);
+    $this->resolver->resolveContext('/d')->willReturn(NULL);
+    $this->resolver->resolveContext('/e')->willReturn('two');
 
     $storage = $this->container->get('path.alias_storage');
     $storage->save('/a', '/A', 'en');
     $storage->save('/b', '/B', 'en');
     $storage->save('/c', '/C', 'en');
+    $storage->save('/d', '/one/D', 'en');
+    $storage->save('/e', '/one/E', 'en');
 
     $this->manager = $this->container->get('path.alias_manager');
   }
@@ -132,6 +136,25 @@ class ContextualAliasesTest extends KernelTestBase {
     $this->assertEquals('/A', $this->manager->getPathByAlias('/A'));
     $this->assertEquals('/a', $this->manager->getPathByAlias('/one/A'));
     $this->assertEquals('/one/A', $this->manager->getAliasByPath('/a'));
+  }
+
+  public function testNonContextualConflictingAlias() {
+    $this->resolver->getCurrentContext()->willReturn(NULL);
+    $this->assertEquals('/d', $this->manager->getPathByAlias('/one/D'));
+    $this->assertEquals('/one/D', $this->manager->getAliasByPath('/d'));
+    $this->resolver->getCurrentContext()->willReturn('one');
+    $this->assertEquals('/d', $this->manager->getPathByAlias('/one/D'));
+    $this->assertEquals('/one/D', $this->manager->getAliasByPath('/d'));
+  }
+
+  public function testContextualConflictingAlias() {
+    $this->resolver->getCurrentContext()->willReturn(NULL);
+    $this->assertEquals('/e', $this->manager->getPathByAlias('/two/one/E'));
+    $this->assertEquals('/two/one/E', $this->manager->getAliasByPath('/e'));
+    $this->resolver->getCurrentContext()->willReturn('one');
+    $this->assertEquals('/two/E', $this->manager->getPathByAlias('/two/E'));
+    $this->assertEquals('/e', $this->manager->getPathByAlias('/two/one/E'));
+    $this->assertEquals('/two/one/E', $this->manager->getAliasByPath('/e'));
   }
 
 }
