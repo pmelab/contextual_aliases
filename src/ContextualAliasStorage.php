@@ -70,7 +70,7 @@ class ContextualAliasStorage extends AliasStorage {
     }
 
     if (!$context || $prefix) {
-      $select->addExpression('CASE WHEN context IS "" OR context IS NULL THEN alias ELSE CONCAT("/", context, alias) END', 'alias');
+      $select->addExpression("CASE WHEN context = '' OR context IS NULL THEN alias ELSE CONCAT('/', context, alias) END", 'alias');
     }
     else {
       $select->addField(static::TABLE, 'alias', 'alias');
@@ -116,7 +116,7 @@ class ContextualAliasStorage extends AliasStorage {
       $select->isNull('context');
     }
 
-    $select->addExpression('CASE WHEN context IS "" OR context IS NULL THEN alias ELSE CONCAT("/", context, alias) END', 'alias');
+    $select->addExpression("CASE WHEN context = '' OR context IS NULL THEN alias ELSE CONCAT('/', context, alias) END", 'alias');
     // ENDCHANGE
 
     foreach ($conditions as $field => $value) {
@@ -188,7 +188,7 @@ class ContextualAliasStorage extends AliasStorage {
       $select->isNull('context');
     }
 
-    $select->addExpression('CASE WHEN context IS "" OR context IS NULL THEN alias ELSE CONCAT("/", context, alias) END', 'alias');
+    $select->addExpression("CASE WHEN context = '' OR context IS NULL THEN alias ELSE CONCAT('/', context, alias) END", 'alias');
     // ENDCHANGE
 
     // Always get the language-specific alias before the language-neutral one.
@@ -254,7 +254,7 @@ class ContextualAliasStorage extends AliasStorage {
     }
 
     if ($context != $currentContext) {
-      $select->addExpression('CASE WHEN context IS "" OR context IS NULL THEN alias ELSE CONCAT("/", context, alias) END', 'alias');
+      $select->addExpression("CASE WHEN context = '' OR context IS NULL THEN alias ELSE CONCAT('/', context, alias) END", 'alias');
     }
     else {
       $select->addField(static::TABLE, 'alias', 'alias');
