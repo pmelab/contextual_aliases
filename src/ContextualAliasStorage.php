@@ -356,6 +356,7 @@ class ContextualAliasStorage extends AliasStorage {
       $contextCondition = $query->orConditionGroup();
       $contextCondition->isNull('context');
       $contextCondition->condition('context', $context);
+      $query->condition($contextCondition);
       $query->orderBy('context', 'DESC');
     }
     else {
