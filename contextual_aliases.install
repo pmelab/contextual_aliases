@@ -12,5 +12,30 @@ function contextual_aliases_install() {
   $schema = Database::getConnection()->schema();
   $schema->addField('url_alias', 'context', $spec);
 
-  // TODO: Add context to indexes.
+  $table = \Drupal\Core\Path\AliasStorage::schemaDefinition();
+  $table['fields']['context'] = $spec;
+
+  $schema->dropIndex('url_alias', 'alias_langcode_pid');
+  $schema->dropIndex('url_alias', 'source_langcode_pid');
+
+  $schema->addIndex('url_alias', 'alias_context_langcode_pid', [
+    'alias', 'context', 'langcode', 'pid',
+  ], $table);
+
+  $schema->addIndex('url_alias', 'source_context_langcode_pid', [
+    'source', 'context', 'langcode', 'pid',
+  ], $table);
+}
+
+function contextual_aliases_uninstall() {
+  $schema = Database::getConnection()->schema();
+
+  $schema->dropIndex('url_alias', 'alias_context_langcode_pid');
+  $schema->dropIndex('url_alias', 'source_context_langcode_pid');
+  $schema->dropField('url_alias', 'context');
+
+  $table = \Drupal\Core\Path\AliasStorage::schemaDefinition();
+
+  $schema->addIndex('url_alias', 'alias_langcode_pid', $table['indexes']['alias_langcode_pid'], $table);
+  $schema->addIndex('url_alias', 'source_langcode_pid', $table['indexes']['source_langcode_pid'], $table);
 }
