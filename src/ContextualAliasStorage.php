@@ -13,10 +13,6 @@ use Drupal\Core\Path\AliasStorage;
  */
 class ContextualAliasStorage extends AliasStorage {
 
-  protected $currentContexts = NULL;
-
-  protected $cachedContexts = [];
-
   /**
    * The list of alias context resolvers.
    *
@@ -32,18 +28,18 @@ class ContextualAliasStorage extends AliasStorage {
   }
 
   /**
-   * Retrieve the list of current contexts.
+   * Retrieve the current context.
    *
-   * @return array
-   *   The list of current contexts.
+   * @return string
+   *   The identifier for the current context.
    */
   protected function getCurrentContext() {
-    if (is_null($this->currentContexts)) {
-      $this->currentContexts = array_filter(array_map(function (AliasContextResolverInterface $resolver) {
-        return $resolver->getCurrentContext();
-      }, $this->contextResolvers));
+    foreach ($this->contextResolvers as $resolver) {
+      if ($context = $resolver->getCurrentContext()) {
+        return $context;
+      }
     }
-    return $this->currentContexts ? $this->currentContexts[0] : NULL;
+    return NULL;
   }
 
   /**
@@ -53,15 +49,12 @@ class ContextualAliasStorage extends AliasStorage {
    *   The list of source contexts.
    */
   protected function getSourceContext($source) {
-    if (!array_key_exists($source, $this->cachedContexts)) {
-      $this->cachedContexts[$source] = NULL;
-      foreach ($this->contextResolvers as $resolver) {
-        if ($context = $resolver->resolveContext($source)) {
-          $this->cachedContexts[$source] = $context;
-        }
+    foreach ($this->contextResolvers as $resolver) {
+      if ($context = $resolver->resolveContext($source)) {
+        return $context;
       }
     }
-    return $this->cachedContexts[$source];
+    return NULL;
   }
 
   protected function _contextCondition($select, $context, $prefix = FALSE) {

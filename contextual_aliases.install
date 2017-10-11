@@ -2,6 +2,12 @@
 
 use Drupal\Core\Database\Database;
 
+/**
+ * Implements hook_install().
+ *
+ * Alter the existing schema for `url_alias`. Add a `context` column and
+ * indices that include it.
+ */
 function contextual_aliases_install() {
   $spec = array(
     'description' => "The context for this alias..",
@@ -27,6 +33,11 @@ function contextual_aliases_install() {
   ], $table);
 }
 
+/**
+ * Implements hook_uninstall().
+ *
+ * Revert changes from `contextual_aliases_install`.
+ */
 function contextual_aliases_uninstall() {
   $schema = Database::getConnection()->schema();
 

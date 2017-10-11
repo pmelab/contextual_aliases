@@ -111,12 +111,18 @@ class ContextualAliasesTest extends KernelTestBase {
     $this->assertInstanceOf(ContextualAliasStorage::class, $storage);
   }
 
+  /**
+   * Test for vanilla aliases without contexts.
+   */
   public function testNoContextSimpleAlias() {
     $this->resolver->getCurrentContext()->willReturn(NULL);
     $this->assertEquals('/c', $this->manager->getPathByAlias('/C'));
     $this->assertEquals('/C', $this->manager->getAliasByPath('/c'));
   }
 
+  /**
+   * Test contextual aliases outside of global context.
+   */
   public function testNoContextContextualAlias() {
     $this->resolver->getCurrentContext()->willReturn(NULL);
     $this->assertEquals('/A', $this->manager->getPathByAlias('/A'));
@@ -124,6 +130,9 @@ class ContextualAliasesTest extends KernelTestBase {
     $this->assertEquals('/one/A', $this->manager->getAliasByPath('/a'));
   }
 
+  /**
+   * Test contextual aliases within a matching global context.
+   */
   public function testContextMatchingAlias() {
     $this->resolver->getCurrentContext()->willReturn('one');
     $this->assertEquals('/a', $this->manager->getPathByAlias('/A'));
@@ -131,6 +140,9 @@ class ContextualAliasesTest extends KernelTestBase {
     $this->assertEquals('/A', $this->manager->getAliasByPath('/a'));
   }
 
+  /**
+   * Test contextual aliases within a different global context.
+   */
   public function testContextNotMatchingAlias() {
     $this->resolver->getCurrentContext()->willReturn('two');
     $this->assertEquals('/A', $this->manager->getPathByAlias('/A'));
@@ -138,23 +150,35 @@ class ContextualAliasesTest extends KernelTestBase {
     $this->assertEquals('/one/A', $this->manager->getAliasByPath('/a'));
   }
 
+  /**
+   * Test aliases that contain another context's prefix.
+   */
   public function testNonContextualConflictingAlias() {
     $this->resolver->getCurrentContext()->willReturn(NULL);
     $this->assertEquals('/d', $this->manager->getPathByAlias('/one/D'));
     $this->assertEquals('/one/D', $this->manager->getAliasByPath('/d'));
+
     $this->resolver->getCurrentContext()->willReturn('one');
     $this->assertEquals('/d', $this->manager->getPathByAlias('/one/D'));
     $this->assertEquals('/one/D', $this->manager->getAliasByPath('/d'));
   }
 
+  /**
+   * Test contextual aliases that contain another context's prefix.
+   */
   public function testContextualConflictingAlias() {
     $this->resolver->getCurrentContext()->willReturn(NULL);
     $this->assertEquals('/e', $this->manager->getPathByAlias('/two/one/E'));
     $this->assertEquals('/two/one/E', $this->manager->getAliasByPath('/e'));
+
     $this->resolver->getCurrentContext()->willReturn('one');
     $this->assertEquals('/two/E', $this->manager->getPathByAlias('/two/E'));
     $this->assertEquals('/e', $this->manager->getPathByAlias('/two/one/E'));
     $this->assertEquals('/two/one/E', $this->manager->getAliasByPath('/e'));
+
+    $this->resolver->getCurrentContext()->willReturn('two');
+    $this->assertEquals('/e', $this->manager->getPathByAlias('/one/E'));
+    $this->assertEquals('/one/E', $this->manager->getAliasByPath('/e'));
   }
 
 }
