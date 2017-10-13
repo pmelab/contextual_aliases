@@ -83,12 +83,19 @@ class ContextualAliasStorage extends AliasStorage {
   public function save($source, $alias, $langcode = LanguageInterface::LANGCODE_NOT_SPECIFIED, $pid = NULL) {
     $result = parent::save($source, $alias, $langcode, $pid);
     if ($result) {
-      $this->connection->update('url_alias')
-        ->fields([
-          'context' => $this->getSourceContext($result['source']),
-        ])
-        ->condition('pid', $result['pid'])
-        ->execute();
+      $context = $this->getSourceContext($result['source']);
+      if ($context) {
+        if (strpos($alias, '/' . $context) === 0) {
+          $alias = substr($alias, strlen($context) + 1);
+        }
+        $this->connection->update('url_alias')
+          ->fields([
+            'alias' => $alias,
+            'context' => $context,
+          ])
+          ->condition('pid', $result['pid'])
+          ->execute();
+      }
     }
 
     return $result;
@@ -113,7 +120,7 @@ class ContextualAliasStorage extends AliasStorage {
       $select->orderBy('context', 'DESC');
     }
     else {
-      $select->isNull('context');
+      $select->orderBy('context', 'ASC');
     }
 
     $select->addExpression("CASE WHEN context = '' OR context IS NULL THEN alias ELSE CONCAT('/', context, alias) END", 'alias');
