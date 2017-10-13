@@ -1,0 +1,13 @@
+<?php
+
+use Drupal\contextual_aliases\Entity\ContextualRedirect;
+
+/**
+ * Implements hook_entity_type_alter().
+ */
+function contextual_aliases_entity_type_alter(array &$entity_types) {
+  /** @var \Drupal\Core\Entity\EntityType[] $entity_types */
+  if (array_key_exists('redirect', $entity_types)) {
+    $entity_types['redirect']->setClass(ContextualRedirect::class);
+  }
+}

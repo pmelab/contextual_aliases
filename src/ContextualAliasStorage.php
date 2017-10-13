@@ -2,6 +2,7 @@
 
 namespace Drupal\contextual_aliases;
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Database\Query\Condition;
 use Drupal\Core\Database\Query\SelectInterface;
 use Drupal\Core\Language\LanguageInterface;
@@ -81,24 +82,79 @@ class ContextualAliasStorage extends AliasStorage {
    * {@inheritdoc}
    */
   public function save($source, $alias, $langcode = LanguageInterface::LANGCODE_NOT_SPECIFIED, $pid = NULL) {
-    $result = parent::save($source, $alias, $langcode, $pid);
-    if ($result) {
-      $context = $this->getSourceContext($result['source']);
-      if ($context) {
-        if (strpos($alias, '/' . $context) === 0) {
-          $alias = substr($alias, strlen($context) + 1);
-        }
-        $this->connection->update('url_alias')
-          ->fields([
-            'alias' => $alias,
-            'context' => $context,
-          ])
-          ->condition('pid', $result['pid'])
-          ->execute();
-      }
+    if ($source[0] !== '/') {
+      throw new \InvalidArgumentException(sprintf('Source path %s has to start with a slash.', $source));
     }
 
-    return $result;
+    if ($alias[0] !== '/') {
+      throw new \InvalidArgumentException(sprintf('Alias path %s has to start with a slash.', $alias));
+    }
+
+    $context = $this->getSourceContext($source);
+
+    if (strpos($alias, '/' . $context) === 0) {
+      $alias = substr($alias, strlen($context) + 1);
+    }
+
+    $fields = [
+      'source' => $source,
+      'alias' => $alias,
+      'context' => $context,
+      'langcode' => $langcode,
+    ];
+
+    // Insert or update the alias.
+    if (empty($pid)) {
+      $try_again = FALSE;
+      try {
+        $query = $this->connection->insert(static::TABLE)
+          ->fields($fields);
+        $pid = $query->execute();
+      }
+      catch (\Exception $e) {
+        // If there was an exception, try to create the table.
+        if (!$try_again = $this->ensureTableExists()) {
+          // If the exception happened for other reason than the missing table,
+          // propagate the exception.
+          throw $e;
+        }
+      }
+      // Now that the table has been created, try again if necessary.
+      if ($try_again) {
+        $query = $this->connection->insert(static::TABLE)
+          ->fields($fields);
+        $pid = $query->execute();
+      }
+
+      $fields['pid'] = $pid;
+      $operation = 'insert';
+    }
+    else {
+      // Fetch the current values so that an update hook can identify what
+      // exactly changed.
+      try {
+        $original = $this->connection->query('SELECT source, alias, langcode FROM {url_alias} WHERE pid = :pid', [':pid' => $pid])
+          ->fetchAssoc();
+      }
+      catch (\Exception $e) {
+        $this->catchException($e);
+        $original = FALSE;
+      }
+      $fields['pid'] = $pid;
+      $query = $this->connection->update(static::TABLE)
+        ->fields($fields)
+        ->condition('pid', $pid);
+      $pid = $query->execute();
+      $fields['original'] = $original;
+      $operation = 'update';
+    }
+    if ($pid) {
+      // @todo Switch to using an event for this instead of a hook.
+      $this->moduleHandler->invokeAll('path_' . $operation, [$fields]);
+      Cache::invalidateTags(['route_match']);
+      return $fields;
+    }
+    return FALSE;
   }
 
   /**
