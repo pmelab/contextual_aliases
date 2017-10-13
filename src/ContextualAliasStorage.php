@@ -33,7 +33,7 @@ class ContextualAliasStorage extends AliasStorage {
    * @return string
    *   The identifier for the current context.
    */
-  protected function getCurrentContext() {
+  public function getCurrentContext() {
     foreach ($this->contextResolvers as $resolver) {
       if ($context = $resolver->getCurrentContext()) {
         return $context;
@@ -48,7 +48,7 @@ class ContextualAliasStorage extends AliasStorage {
    * @return string
    *   The list of source contexts.
    */
-  protected function getSourceContext($source) {
+  public function getSourceContext($source) {
     foreach ($this->contextResolvers as $resolver) {
       if ($context = $resolver->resolveContext($source)) {
         return $context;

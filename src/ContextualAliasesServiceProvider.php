@@ -4,6 +4,7 @@ namespace Drupal\contextual_aliases;
 
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\DependencyInjection\ServiceProviderBase;
+use Symfony\Component\DependencyInjection\Reference;
 
 /**
  * Service provider that replaces the default alias storage.
@@ -20,6 +21,12 @@ class ContextualAliasesServiceProvider extends ServiceProviderBase {
         'tag' => 'alias_context_resolver',
         'call' => 'addContextResolver',
       ]);
+
+    if ($container->has('pathauto.alias_uniquifier')) {
+      $container->getDefinition('pathauto.alias_uniquifier')
+        ->setClass(ContextualAliasUniquifier::class)
+        ->addArgument(new Reference('path.alias_storage'));
+    }
   }
 
 }
