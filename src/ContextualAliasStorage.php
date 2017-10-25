@@ -405,6 +405,15 @@ class ContextualAliasStorage extends AliasStorage {
    * {@inheritdoc}
    */
   public function aliasExists($alias, $langcode, $source = NULL) {
+    $query = $this->connection->select(static::TABLE);
+    $query->fields(static::TABLE)
+      ->condition('alias', $alias)
+      ->isNull('context');
+
+    foreach ($query->execute()->fetchAll() as $row) {
+      $this->save($row['alias'], $row['source'], $row['langcode']);
+    }
+
     // Use LIKE and NOT LIKE for case-insensitive matching.
     $query = $this->connection->select(static::TABLE)
       ->condition('alias', $this->connection->escapeLike($alias), 'LIKE')

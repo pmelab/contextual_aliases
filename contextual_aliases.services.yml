@@ -1,0 +1,5 @@
+services:
+  contextual_aliases.route_subscriber:
+    class: Drupal\contextual_aliases\Routing\RouteSubscriber
+    tags:
+      - { name: event_subscriber }
