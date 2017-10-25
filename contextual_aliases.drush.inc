@@ -74,7 +74,9 @@ function drush_contextual_aliases_update_batch($step, $size, $total) {
       }
     }
     // Re-save alias to trigger context resolution.
-    $storage->save($row->source, $row->alias, $row->langcode, $row->pid);
+    try {
+      $storage->save($row->source, $row->alias, $row->langcode, $row->pid);
+    } catch (Exception $exc) {}
   }
 
 }
