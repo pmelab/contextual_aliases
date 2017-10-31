@@ -371,14 +371,22 @@ class ContextualAliasStorage extends AliasStorage {
       $contextGroup
         ->condition('context', $head)
         ->condition('alias', $this->connection->escapeLike('/' . implode('/', $tail)), 'LIKE');
+
       $nonContextGroup = $aliasGroup->andConditionGroup();
       $nonContextGroup->condition('alias', $this->connection->escapeLike($alias), 'LIKE');
       $nonContextGroup->condition('context', $context);
+
+      $nullContextGroup = $aliasGroup->andConditionGroup();
+      $nullContextGroup->condition('alias', $this->connection->escapeLike($alias), 'LIKE');
+      $nullContextGroup->isNull('context');
+
       $aliasGroup->condition($contextGroup);
       $aliasGroup->condition($nonContextGroup);
+      $aliasGroup->condition($nullContextGroup);
       $select->condition($aliasGroup);
     }
 
+    $select->orderBy('context', 'DESC');
 
     if ($langcode == LanguageInterface::LANGCODE_NOT_SPECIFIED) {
       array_pop($langcode_list);

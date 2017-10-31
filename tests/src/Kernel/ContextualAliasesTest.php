@@ -151,6 +151,15 @@ class ContextualAliasesTest extends KernelTestBase {
   }
 
   /**
+   * Test simple aliases within a defined global context.
+   */
+  public function testContextSimpleAlias() {
+    $this->resolver->getCurrentContext()->willReturn('one');
+    $this->assertEquals('/c', $this->manager->getPathByAlias('/C'));
+    $this->assertEquals('/C', $this->manager->getAliasByPath('/c'));
+  }
+
+  /**
    * Test aliases that contain another context's prefix.
    */
   public function testNonContextualConflictingAlias() {
