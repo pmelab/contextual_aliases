@@ -92,8 +92,8 @@ class ContextualAliasStorage extends AliasStorage {
 
     $context = $this->getSourceContext($source);
 
-    if ($context && strpos($alias, '/' . $context) === 0) {
-      $alias = substr($alias, strlen($context) + 1);
+    if ($context && strpos($alias, '/' . $context . '/') === 0) {
+      $alias = substr($alias, strlen($context) + 2);
     }
 
     $fields = [
