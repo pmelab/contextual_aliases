@@ -92,8 +92,8 @@ class ContextualAliasStorage extends AliasStorage {
 
     $context = $this->getSourceContext($source);
 
-    if ($context && strpos($alias, '/' . $context . '/') === 0) {
-      $alias = substr($alias, strlen($context) + 2);
+    if ($context && strpos($alias, '/--' . $context . '--/') === 0) {
+      $alias = substr($alias, strlen($context) + 6);
     }
 
     $fields = [
@@ -179,7 +179,7 @@ class ContextualAliasStorage extends AliasStorage {
       $select->orderBy('context', 'ASC');
     }
 
-    $select->addExpression("CASE WHEN context = '' OR context IS NULL THEN alias ELSE CONCAT('/', context, alias) END", 'alias');
+    $select->addExpression("CASE WHEN context = '' OR context IS NULL THEN alias ELSE CONCAT('/--', context, '--', alias) END", 'alias');
     // ENDCHANGE
 
     foreach ($conditions as $field => $value) {
@@ -193,11 +193,14 @@ class ContextualAliasStorage extends AliasStorage {
           $aliasGroup = $select->orConditionGroup();
           $aliasGroup->condition($field, $this->connection->escapeLike($value), 'LIKE');
           $contextGroup = $aliasGroup->andConditionGroup();
-          $tail = explode('/', $value);
-          $head = array_shift($tail);
-          $contextGroup
-            ->condition('context', $head)
-            ->condition('alias', $this->connection->escapeLike('/' . implode('/', $tail)), 'LIKE');
+          if (substr($value, 0, 3) == '/--') {
+            $tail = explode('/', $value);
+            $head = substr(array_shift($tail), 2, -2);
+            $contextGroup
+              ->condition('context', $head)
+              ->condition('alias', $this->connection->escapeLike('/' . implode('/', $tail)), 'LIKE');
+          }
+          $aliasGroup->condition($contextGroup);
         }
         else {
           $select->condition($field, $this->connection->escapeLike($value), 'LIKE');
@@ -251,7 +254,7 @@ class ContextualAliasStorage extends AliasStorage {
       $select->isNull('context');
     }
 
-    $select->addExpression("CASE WHEN context = '' OR context IS NULL THEN alias ELSE CONCAT('/', context, alias) END", 'alias');
+    $select->addExpression("CASE WHEN context = '' OR context IS NULL THEN alias ELSE CONCAT('/--', context, '--', alias) END", 'alias');
     // ENDCHANGE
 
     // Always get the language-specific alias before the language-neutral one.
@@ -317,7 +320,7 @@ class ContextualAliasStorage extends AliasStorage {
     }
 
     if ($context != $currentContext) {
-      $select->addExpression("CASE WHEN context = '' OR context IS NULL THEN alias ELSE CONCAT('/', context, alias) END", 'alias');
+      $select->addExpression("CASE WHEN context = '' OR context IS NULL THEN alias ELSE CONCAT('/--', context, '--', alias) END", 'alias');
     }
     else {
       $select->addField(static::TABLE, 'alias', 'alias');
@@ -353,24 +356,34 @@ class ContextualAliasStorage extends AliasStorage {
       $nonContextGroup->isNull('context');
       $aliasGroup->condition($nonContextGroup);
       $contextGroup = $aliasGroup->andConditionGroup();
-      $tail = explode('/', ltrim($alias, '/'));
-      $head = array_shift($tail);
-      $contextGroup
-        ->condition('context', $head)
-        ->condition('alias', $this->connection->escapeLike('/' . implode('/', $tail)), 'LIKE');
-      $aliasGroup->condition($contextGroup);
+      $value = ltrim($alias, '/');
+
+      if (substr($value, 0, 2) == '--') {
+        $tail = explode('/', $value);
+        $head = substr(array_shift($tail), 2, -2);
+        $contextGroup
+          ->condition('context', $head)
+          ->condition('alias', $this->connection->escapeLike('/' . implode('/', $tail)), 'LIKE');
+        $aliasGroup->condition($contextGroup);
+      }
+
       $select->condition($aliasGroup);
     }
     else {
-      $tail = explode('/', ltrim($alias, '/'));
-      $head = array_shift($tail);
+      $value = ltrim($alias, '/');
 
       $aliasGroup = $select->orConditionGroup();
-      $contextGroup = $aliasGroup->andConditionGroup();
+      if (substr($value, 0, 2) == '--') {
+        $tail = explode('/', $value);
+        $head = substr(array_shift($tail), 2, -2);
+        $contextGroup = $aliasGroup->andConditionGroup();
 
-      $contextGroup
-        ->condition('context', $head)
-        ->condition('alias', $this->connection->escapeLike('/' . implode('/', $tail)), 'LIKE');
+        $contextGroup
+          ->condition('context', $head)
+          ->condition('alias', $this->connection->escapeLike('/' . implode('/', $tail)), 'LIKE');
+        $aliasGroup->condition($contextGroup);
+      }
+
 
       $nonContextGroup = $aliasGroup->andConditionGroup();
       $nonContextGroup->condition('alias', $this->connection->escapeLike($alias), 'LIKE');
@@ -380,7 +393,6 @@ class ContextualAliasStorage extends AliasStorage {
       $nullContextGroup->condition('alias', $this->connection->escapeLike($alias), 'LIKE');
       $nullContextGroup->isNull('context');
 
-      $aliasGroup->condition($contextGroup);
       $aliasGroup->condition($nonContextGroup);
       $aliasGroup->condition($nullContextGroup);
       $select->condition($aliasGroup);

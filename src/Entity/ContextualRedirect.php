@@ -16,7 +16,7 @@ class ContextualRedirect extends Redirect {
     $context = isset($parsed['path']) ? $aliasStorage->getSourceContext($parsed['path']) : NULL;
     $this->set('context', $context);
     $this->set('hash', Redirect::generateHash(
-      ($context ? '/' . $context : '') . $this->redirect_source->path,
+      ($context ? '/--' . $context : '--') . $this->redirect_source->path,
       (array) $this->redirect_source->query,
       $this->language()->getId()
     ));
