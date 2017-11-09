@@ -174,12 +174,13 @@ class ContextualAliasStorage extends AliasStorage {
       $contextCondition->isNull('context');
       $contextCondition->condition('context', $context);
       $select->orderBy('context', 'DESC');
+      $select->addField(static::TABLE, 'alias', 'alias');
     }
     else {
+      $select->addExpression("CASE WHEN context = '' OR context IS NULL THEN alias ELSE CONCAT('/--', context, '--', alias) END", 'alias');
       $select->orderBy('context', 'ASC');
     }
 
-    $select->addExpression("CASE WHEN context = '' OR context IS NULL THEN alias ELSE CONCAT('/--', context, '--', alias) END", 'alias');
     // ENDCHANGE
 
     foreach ($conditions as $field => $value) {
