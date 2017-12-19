@@ -92,10 +92,6 @@ class ContextualAliasStorage extends AliasStorage {
 
     $context = $this->getSourceContext($source);
 
-    if ($context && strpos($alias, '/--' . $context . '--/') === 0) {
-      $alias = substr($alias, strlen($context) + 6);
-    }
-
     $fields = [
       'source' => $source,
       'alias' => $alias,
@@ -174,12 +170,12 @@ class ContextualAliasStorage extends AliasStorage {
       $contextCondition->isNull('context');
       $contextCondition->condition('context', $context);
       $select->orderBy('context', 'DESC');
-      $select->addField(static::TABLE, 'alias', 'alias');
     }
     else {
-      $select->addExpression("CASE WHEN context = '' OR context IS NULL THEN alias ELSE CONCAT('/--', context, '--', alias) END", 'alias');
       $select->orderBy('context', 'ASC');
     }
+
+    $select->addField(static::TABLE, 'alias', 'alias');
 
     // ENDCHANGE
 
@@ -190,22 +186,7 @@ class ContextualAliasStorage extends AliasStorage {
       }
       // CHANGE: special behavior for alias conditions.
       else if ($field == 'alias') {
-        if (!$context) {
-          $aliasGroup = $select->orConditionGroup();
-          $aliasGroup->condition($field, $this->connection->escapeLike($value), 'LIKE');
-          $contextGroup = $aliasGroup->andConditionGroup();
-          if (substr($value, 0, 3) == '/--') {
-            $tail = explode('/', $value);
-            $head = substr(array_shift($tail), 2, -2);
-            $contextGroup
-              ->condition('context', $head)
-              ->condition('alias', $this->connection->escapeLike('/' . implode('/', $tail)), 'LIKE');
-          }
-          $aliasGroup->condition($contextGroup);
-        }
-        else {
-          $select->condition($field, $this->connection->escapeLike($value), 'LIKE');
-        }
+        $select->condition($field, $this->connection->escapeLike($value), 'LIKE');
       }
       // ENDCHANGE
       else {
@@ -232,7 +213,7 @@ class ContextualAliasStorage extends AliasStorage {
   public function preloadPathAlias($preloaded, $langcode) {
     $langcode_list = [$langcode, LanguageInterface::LANGCODE_NOT_SPECIFIED];
     $select = $this->connection->select(static::TABLE)
-      ->fields(static::TABLE, ['source']);
+      ->fields(static::TABLE, ['source', 'alias']);
 
     if (!empty($preloaded)) {
       $conditions = new Condition('OR');
@@ -251,11 +232,7 @@ class ContextualAliasStorage extends AliasStorage {
       $contextCondition->condition('context', $context);
       $select->orderBy('context', 'DESC');
     }
-    else {
-      $select->isNull('context');
-    }
 
-    $select->addExpression("CASE WHEN context = '' OR context IS NULL THEN alias ELSE CONCAT('/--', context, '--', alias) END", 'alias');
     // ENDCHANGE
 
     // Always get the language-specific alias before the language-neutral one.
@@ -316,16 +293,8 @@ class ContextualAliasStorage extends AliasStorage {
       $contextCondition->condition('context', $context);
       $select->orderBy('context', 'DESC');
     }
-    else {
-      $select->isNull('context');
-    }
 
-    if ($context != $currentContext) {
-      $select->addExpression("CASE WHEN context = '' OR context IS NULL THEN alias ELSE CONCAT('/--', context, '--', alias) END", 'alias');
-    }
-    else {
-      $select->addField(static::TABLE, 'alias', 'alias');
-    }
+    $select->addField(static::TABLE, 'alias', 'alias');
 
     $select->orderBy('pid', 'DESC');
     $select->condition('langcode', $langcode_list, 'IN');
@@ -347,59 +316,10 @@ class ContextualAliasStorage extends AliasStorage {
 
     // See the queries above. Use LIKE for case-insensitive matching.
     $select = $this->connection->select(static::TABLE)
-      ->fields(static::TABLE, ['source']);
+      ->fields(static::TABLE, ['source', 'context']);
     $context = $this->getCurrentContext();
 
-    if (!$context) {
-      $aliasGroup = $select->orConditionGroup();
-      $nonContextGroup = $aliasGroup->andConditionGroup();
-      $nonContextGroup->condition('alias', $this->connection->escapeLike($alias), 'LIKE');
-      $nonContextGroup->isNull('context');
-      $aliasGroup->condition($nonContextGroup);
-      $contextGroup = $aliasGroup->andConditionGroup();
-      $value = ltrim($alias, '/');
-
-      if (substr($value, 0, 2) == '--') {
-        $tail = explode('/', $value);
-        $head = substr(array_shift($tail), 2, -2);
-        $contextGroup
-          ->condition('context', $head)
-          ->condition('alias', $this->connection->escapeLike('/' . implode('/', $tail)), 'LIKE');
-        $aliasGroup->condition($contextGroup);
-      }
-
-      $select->condition($aliasGroup);
-    }
-    else {
-      $value = ltrim($alias, '/');
-
-      $aliasGroup = $select->orConditionGroup();
-      if (substr($value, 0, 2) == '--') {
-        $tail = explode('/', $value);
-        $head = substr(array_shift($tail), 2, -2);
-        $contextGroup = $aliasGroup->andConditionGroup();
-
-        $contextGroup
-          ->condition('context', $head)
-          ->condition('alias', $this->connection->escapeLike('/' . implode('/', $tail)), 'LIKE');
-        $aliasGroup->condition($contextGroup);
-      }
-
-
-      $nonContextGroup = $aliasGroup->andConditionGroup();
-      $nonContextGroup->condition('alias', $this->connection->escapeLike($alias), 'LIKE');
-      $nonContextGroup->condition('context', $context);
-
-      $nullContextGroup = $aliasGroup->andConditionGroup();
-      $nullContextGroup->condition('alias', $this->connection->escapeLike($alias), 'LIKE');
-      $nullContextGroup->isNull('context');
-
-      $aliasGroup->condition($nonContextGroup);
-      $aliasGroup->condition($nullContextGroup);
-      $select->condition($aliasGroup);
-    }
-
-    $select->orderBy('context', 'DESC');
+    $select->condition('alias', $this->connection->escapeLike($alias), 'LIKE');
 
     if ($langcode == LanguageInterface::LANGCODE_NOT_SPECIFIED) {
       array_pop($langcode_list);
@@ -414,7 +334,18 @@ class ContextualAliasStorage extends AliasStorage {
     $select->orderBy('pid', 'DESC');
     $select->condition('langcode', $langcode_list, 'IN');
     try {
-      return $select->execute()->fetchField();
+      $results = $select->execute()->fetchAll();
+      if ($context) {
+        $matching = array_filter($results, function ($row) use($context) {
+          return $row->context == $context;
+        });
+        if ($matching) {
+          $results = array_values($matching);
+        }
+      }
+      if ($results) {
+        return $results[0]->source;
+      }
     }
     catch (\Exception $e) {
       $this->catchException($e);
