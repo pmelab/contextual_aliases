@@ -210,61 +210,6 @@ class ContextualAliasStorage extends AliasStorage {
   /**
    * {@inheritdoc}
    */
-  public function preloadPathAlias($preloaded, $langcode) {
-    $langcode_list = [$langcode, LanguageInterface::LANGCODE_NOT_SPECIFIED];
-    $select = $this->connection->select(static::TABLE)
-      ->fields(static::TABLE, ['source', 'alias']);
-
-    if (!empty($preloaded)) {
-      $conditions = new Condition('OR');
-      foreach ($preloaded as $preloaded_item) {
-        $conditions->condition('source', $this->connection->escapeLike($preloaded_item), 'LIKE');
-      }
-      $select->condition($conditions);
-    }
-
-    // CHANGE: Added context condition.
-    $context = $this->getCurrentContext();
-
-    if ($context) {
-      $contextCondition = $select->orConditionGroup();
-      $contextCondition->isNull('context');
-      $contextCondition->condition('context', $context);
-      $select->orderBy('context', 'DESC');
-    }
-
-    // ENDCHANGE
-
-    // Always get the language-specific alias before the language-neutral one.
-    // For example 'de' is less than 'und' so the order needs to be ASC, while
-    // 'xx-lolspeak' is more than 'und' so the order needs to be DESC. We also
-    // order by pid ASC so that fetchAllKeyed() returns the most recently
-    // created alias for each source. Subsequent queries using fetchField() must
-    // use pid DESC to have the same effect.
-    if ($langcode == LanguageInterface::LANGCODE_NOT_SPECIFIED) {
-      array_pop($langcode_list);
-    }
-    elseif ($langcode < LanguageInterface::LANGCODE_NOT_SPECIFIED) {
-      $select->orderBy('langcode', 'ASC');
-    }
-    else {
-      $select->orderBy('langcode', 'DESC');
-    }
-
-    $select->orderBy('pid', 'ASC');
-    $select->condition('langcode', $langcode_list, 'IN');
-    try {
-      return $select->execute()->fetchAllKeyed();
-    }
-    catch (\Exception $e) {
-      $this->catchException($e);
-      return FALSE;
-    }
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function lookupPathAlias($path, $langcode) {
     $source = $this->connection->escapeLike($path);
     $langcode_list = [$langcode, LanguageInterface::LANGCODE_NOT_SPECIFIED];
