@@ -95,6 +95,7 @@ class ContextualAliasesTest extends KernelTestBase {
 
     $storage = $this->container->get('path.alias_storage');
     $storage->save('/a', '/A', 'en');
+    $storage->save('/b', '/A', 'en');
     $storage->save('/b', '/B', 'en');
     $storage->save('/c', '/C', 'en');
     $storage->save('/d', '/one/D', 'en');
@@ -143,8 +144,18 @@ class ContextualAliasesTest extends KernelTestBase {
   /**
    * Test contextual aliases within a different global context.
    */
-  public function testContextNotMatchingAlias() {
+  public function testContextDifferentMatchingAlias() {
     $this->resolver->getCurrentContext()->willReturn('two');
+    $this->assertEquals('/b', $this->manager->getPathByAlias('/A'));
+    $this->assertEquals('/a', $this->manager->getPathByAlias('/--one--/A'));
+    $this->assertEquals('/--one--/A', $this->manager->getAliasByPath('/a'));
+  }
+
+  /**
+   * Test contextual aliases within a different global context.
+   */
+  public function testContextNotMatchingAlias() {
+    $this->resolver->getCurrentContext()->willReturn('three');
     $this->assertEquals('/A', $this->manager->getPathByAlias('/A'));
     $this->assertEquals('/a', $this->manager->getPathByAlias('/--one--/A'));
     $this->assertEquals('/--one--/A', $this->manager->getAliasByPath('/a'));
