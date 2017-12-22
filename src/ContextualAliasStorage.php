@@ -314,11 +314,7 @@ class ContextualAliasStorage extends AliasStorage {
     // CHANGE: Injected context condtion.
     $context = $source ? $this->getSourceContext($source) : $this->getCurrentContext();
     if ($context) {
-      $contextCondition = $query->orConditionGroup();
-      $contextCondition->isNull('context');
-      $contextCondition->condition('context', $context);
-      $query->condition($contextCondition);
-      $query->orderBy('context', 'DESC');
+      $query->condition('context', $context);
     }
     else {
       $query->isNull('context');
