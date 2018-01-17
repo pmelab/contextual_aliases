@@ -14,12 +14,21 @@ class ContextualRedirect extends Redirect {
     $aliasStorage = \Drupal::service('path.alias_storage');
     $parsed = parse_url($this->redirect_redirect->uri);
     $context = isset($parsed['path']) ? $aliasStorage->getSourceContext($parsed['path']) : NULL;
-    $this->set('context', $context);
-    $this->set('hash', Redirect::generateHash(
-      ($context ? '/--' . $context : '--') . $this->redirect_source->path,
-      (array) $this->redirect_source->query,
-      $this->language()->getId()
-    ));
+    if ($context) {
+      $this->set('context', $context);
+      $this->set('hash', Redirect::generateHash(
+        $this->redirect_source->path,
+        array_merge((array) $this->redirect_source->query, ['_context' => $context]),
+        $this->language()->getId()
+      ));
+    }
+    else if ($this->context->value) {
+      $this->set('hash', Redirect::generateHash(
+        $this->redirect_source->path,
+        array_merge((array) $this->redirect_source->query, ['_context' => $this->context->value]),
+        $this->language()->getId()
+      ));
+    }
   }
 
   /**
@@ -27,11 +36,15 @@ class ContextualRedirect extends Redirect {
    */
   public static function baseFieldDefinitions(EntityTypeInterface $entity_type) {
     $fields = parent::baseFieldDefinitions($entity_type);
-    $fields['context'] = BaseFieldDefinition::create('string')
+    $fields['context'] = BaseFieldDefinition::create('list_string')
       ->setLabel(t('Context'))
+      ->setDescription(t('Choose the context this redirect should apply in. <strong>If the target is bound to a context, this value will be overridden!</strong>'))
       ->setSetting('max_length', 32)
       ->setRequired(FALSE)
-      ->setDescription(t('The alias context.'));
+      ->setSetting('allowed_values_function', 'contextual_aliases_context_options')
+      ->setDisplayOptions('form', [
+        'type' => 'select',
+      ]);
     return $fields;
   }
 

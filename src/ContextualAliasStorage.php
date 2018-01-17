@@ -29,6 +29,19 @@ class ContextualAliasStorage extends AliasStorage {
   }
 
   /**
+   * List of possible contexts.
+   *
+   * @return array
+   *   The options array of contexts.
+   */
+  public function getContextOptions() {
+    $return = array_reduce(array_map(function (AliasContextResolverInterface $resolver) {
+      return $resolver->getContextOptions();
+    }, $this->contextResolvers), 'array_merge', []);
+    return $return;
+  }
+
+  /**
    * Retrieve the current context.
    *
    * @return string

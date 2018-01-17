@@ -16,6 +16,14 @@ interface AliasContextResolverInterface {
   function getCurrentContext();
 
   /**
+   * List of possible contexts.
+   *
+   * @return array
+   *   The options array of contexts.
+   */
+  function getContextOptions();
+
+  /**
    * Build the alias context for a given destination path.
    *
    * @param $path
@@ -25,5 +33,6 @@ interface AliasContextResolverInterface {
    *   The context identifier or NULL if this resolver doesn't apply.
    */
   function resolveContext($path);
+
 }
 

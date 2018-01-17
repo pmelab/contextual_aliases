@@ -11,3 +11,7 @@ function contextual_aliases_entity_type_alter(array &$entity_types) {
     $entity_types['redirect']->setClass(ContextualRedirect::class);
   }
 }
+
+function contextual_aliases_context_options() {
+  return \Drupal::service('path.alias_storage')->getContextOptions();
+}
