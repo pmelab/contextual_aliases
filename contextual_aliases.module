@@ -1,6 +1,9 @@
 <?php
 
 use Drupal\contextual_aliases\Entity\ContextualRedirect;
+use Drupal\contextual_aliases\Form\ContextualRedirectForm;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\redirect\Plugin\Field\FieldWidget\RedirectSourceWidget;
 
 /**
  * Implements hook_entity_type_alter().
@@ -9,9 +12,26 @@ function contextual_aliases_entity_type_alter(array &$entity_types) {
   /** @var \Drupal\Core\Entity\EntityType[] $entity_types */
   if (array_key_exists('redirect', $entity_types)) {
     $entity_types['redirect']->setClass(ContextualRedirect::class);
+    $entity_types['redirect']->setFormClass('default', ContextualRedirectForm::class);
+    $entity_types['redirect']->setFormClass('edit', ContextualRedirectForm::class);
   }
 }
 
+/**
+ * Collect all context options for displaying a select box.
+ */
 function contextual_aliases_context_options() {
   return \Drupal::service('path.alias_storage')->getContextOptions();
+}
+
+/**
+ * Implements hook_field_widget_form_alter().
+ */
+function contextual_aliases_field_widget_form_alter(&$element, FormStateInterface $form_state, $context) {
+  if ($context['widget'] instanceof RedirectSourceWidget) {
+    // Disable ajax functionality, since it doesn't know the context and
+    // results in false positives.
+    unset($element['path']['#ajax']);
+  }
+
 }
