@@ -9,11 +9,13 @@ trait ContextualPathFormTrait {
 
   public function buildForm(array $form, FormStateInterface $form_state, $pid = NULL) {
     $form = parent::buildForm($form, $form_state, $pid);
+    $path = $this->buildPath($pid);
     $form['context'] = [
       '#title' => $this->t('Context'),
       '#description' => $this->t('Choose the context this alias should apply in. <strong>If the existing path is bound to a context, this value will be overridden!</strong>'),
       '#type' => 'select',
       '#options' => contextual_aliases_context_options(),
+      '#default_value' => $path['context'],
     ];
     return $form;
   }
