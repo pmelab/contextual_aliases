@@ -94,7 +94,7 @@ class ContextualAliasStorage extends AliasStorage {
   /**
    * {@inheritdoc}
    */
-  public function save($source, $alias, $langcode = LanguageInterface::LANGCODE_NOT_SPECIFIED, $pid = NULL) {
+  public function save($source, $alias, $langcode = LanguageInterface::LANGCODE_NOT_SPECIFIED, $pid = NULL, $context = NULL) {
     if ($source[0] !== '/') {
       throw new \InvalidArgumentException(sprintf('Source path %s has to start with a slash.', $source));
     }
@@ -103,7 +103,9 @@ class ContextualAliasStorage extends AliasStorage {
       throw new \InvalidArgumentException(sprintf('Alias path %s has to start with a slash.', $alias));
     }
 
-    $context = $this->getSourceContext($source);
+    if ($derivedContext = $this->getSourceContext($source)) {
+      $context = $derivedContext;
+    }
 
     $fields = [
       'source' => $source,

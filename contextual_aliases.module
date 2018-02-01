@@ -33,5 +33,4 @@ function contextual_aliases_field_widget_form_alter(&$element, FormStateInterfac
     // results in false positives.
     unset($element['path']['#ajax']);
   }
-
 }
