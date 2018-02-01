@@ -233,6 +233,20 @@ class ContextualAliasStorage extends AliasStorage {
     $select = $this->connection->select(static::TABLE)
       ->condition('source', $source, 'LIKE');
 
+    $context = $this->getSourceContext($path) ?: $this->getCurrentContext();
+
+    /** @var $select SelectInterface */
+    if ($context) {
+      $contextCondition = $select->orConditionGroup();
+      $contextCondition->isNull('context');
+      $contextCondition->condition('context', $context);
+      $select->condition($contextCondition);
+      $select->orderBy('context', 'DESC');
+    }
+    else {
+      $select->orderBy('pid', 'DESC');
+    }
+
     if ($langcode == LanguageInterface::LANGCODE_NOT_SPECIFIED) {
       array_pop($langcode_list);
     }
@@ -243,20 +257,8 @@ class ContextualAliasStorage extends AliasStorage {
       $select->orderBy('langcode', 'ASC');
     }
 
-    $context = $this->getSourceContext($path);
-    $currentContext = $this->getCurrentContext();
-
-    /** @var $select SelectInterface */
-    if ($context) {
-      $contextCondition = $select->orConditionGroup();
-      $contextCondition->isNull('context');
-      $contextCondition->condition('context', $context);
-      $select->orderBy('context', 'DESC');
-    }
-
     $select->addField(static::TABLE, 'alias', 'alias');
 
-    $select->orderBy('pid', 'DESC');
     $select->condition('langcode', $langcode_list, 'IN');
     try {
       return $select->execute()->fetchField();
