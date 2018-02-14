@@ -44,6 +44,7 @@ class ContextualRedirect extends Redirect {
       ->setSetting('allowed_values_function', 'contextual_aliases_context_options')
       ->setDisplayOptions('form', [
         'type' => 'select',
+        'weight' => 0,
       ]);
     return $fields;
   }

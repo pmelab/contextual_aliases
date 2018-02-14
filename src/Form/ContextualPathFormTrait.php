@@ -15,7 +15,7 @@ trait ContextualPathFormTrait {
       '#description' => $this->t('Choose the context this alias should apply in. <strong>If the existing path is bound to a context, this value will be overridden!</strong>'),
       '#type' => 'select',
       '#options' => contextual_aliases_context_options(),
-      '#default_value' => $path['context'],
+      '#default_value' => isset($path['context']) ? $path['context'] : NULL,
     ];
     return $form;
   }
