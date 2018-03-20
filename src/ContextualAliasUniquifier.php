@@ -6,7 +6,6 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Path\AliasManagerInterface;
-use Drupal\Core\Path\AliasStorageInterface;
 use Drupal\Core\Routing\RouteProviderInterface;
 use Drupal\pathauto\AliasStorageHelperInterface;
 use Drupal\pathauto\AliasUniquifier;
@@ -39,11 +38,19 @@ class ContextualAliasUniquifier extends AliasUniquifier {
   }
 
 
-  public function isReserved($alias, $source, $langcode = LanguageInterface::LANGCODE_NOT_SPECIFIED
-  ) {
+  public function isReserved($alias, $source, $langcode = LanguageInterface::LANGCODE_NOT_SPECIFIED) {
 
     if ($context = $this->aliasStorage->getSourceContext($source)) {
-      $alias = '/' . $context . $alias;
+      // If we have a context, run the uniquifier in that context.
+      return $this->aliasStorage->executeInContext(function () use ($alias, $source, $langcode, $context) {
+        if ($existing_source = $this->aliasManager->getPathByAlias($alias, $langcode)) {
+          if ($existing_source != $alias) {
+            $existing_context = $this->aliasStorage->getSourceContext($existing_source);
+            return $existing_source != $source && $context == $existing_context;
+          }
+        }
+        return FALSE;
+      }, $context);
     }
 
     return parent::isReserved(
