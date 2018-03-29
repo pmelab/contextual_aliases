@@ -12,7 +12,56 @@ function contextual_aliases_drush_command() {
     'description' => 'Update aliases without context.',
   ];
 
+  $commands['contextual-aliases-repair-redirects'] = [
+    'description' => 'Update aliases without context.',
+  ];
+
   return $commands;
+}
+
+function drush_contextual_aliases_repair_redirects() {
+
+  /** @var \Drupal\Core\Database\Connection $db */
+  $db = \Drupal::service('database');
+  $query = $db->select('redirect');
+  $query->isNotNull('context');
+  $count = $query->countQuery()->execute()->fetchField();
+  $batchSize = 50;
+  $batchCount = ceil($count / $batchSize);
+
+  drush_print('Updating ' . $count . ' redirects.');
+
+  $batch = [
+    'title' => t('Updating redirects.'),
+    'operations' => array_map(function ($step) use ($batchSize, $count) {
+      return ['drush_contextual_aliases_refresh_redirects_batch', [$step, $batchSize, $count]];
+    }, range(0, $batchCount - 1)),
+  ];
+
+  batch_set($batch);
+  drush_backend_batch_process();
+}
+
+/**
+ * One batch of alias updates.
+ */
+function drush_contextual_aliases_refresh_redirects_batch($step, $size, $total) {
+  $offset = $step * $size;
+  $limit = ($step + 1) * $size;
+  drush_print("Updating redirects $offset to $limit of $total.");
+
+  /** @var \Drupal\Core\Database\Connection $db */
+  $ids = \Drupal::entityQuery('redirect')
+    ->exists('context')
+    ->range($offset, $size)
+    ->execute();
+  foreach (\Drupal\redirect\Entity\Redirect::loadMultiple($ids) as $redirect) {
+    try {
+      $redirect->save();
+    } catch (\Drupal\Core\Database\IntegrityConstraintViolationException $exception) {
+      $redirect->delete();
+    }
+  }
 }
 
 /**
