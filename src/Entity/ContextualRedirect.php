@@ -17,14 +17,14 @@ class ContextualRedirect extends Redirect {
     if ($context) {
       $this->set('context', $context);
       $this->set('hash', Redirect::generateHash(
-        '/' . $context . '/' . $this->redirect_source->path,
+        $context . '/' . $this->redirect_source->path,
         (array) $this->redirect_source->query,
         $this->language()->getId()
       ));
     }
     else if ($this->context->value) {
       $this->set('hash', Redirect::generateHash(
-        '/' . $this->context->value . '/' . $this->redirect_source->path,
+        $this->context->value . '/' . $this->redirect_source->path,
         (array) $this->redirect_source->query,
         $this->language()->getId()
       ));
