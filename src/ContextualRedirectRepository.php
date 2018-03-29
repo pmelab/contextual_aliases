@@ -36,7 +36,7 @@ class ContextualRedirectRepository extends RedirectRepository {
     $context = $this->aliasStorage->getCurrentContext();
     if ($context) {
       return parent::findMatchingRedirect(
-        '/' . $context . $source_path,
+        '/' . $context . '/' . $source_path,
         $query,
         $language
       ) ?: parent::findMatchingRedirect(
