@@ -1,6 +1,7 @@
 <?php
 
 use \Drupal\contextual_aliases\ContextualAliasStorage;
+use Drupal\Core\Entity\EntityStorageException;
 
 /**
  * Implements hook_drush_command().
@@ -20,7 +21,6 @@ function contextual_aliases_drush_command() {
 }
 
 function drush_contextual_aliases_repair_redirects() {
-
   /** @var \Drupal\Core\Database\Connection $db */
   $db = \Drupal::service('database');
   $query = $db->select('redirect');
@@ -55,10 +55,12 @@ function drush_contextual_aliases_refresh_redirects_batch($step, $size, $total) 
     ->exists('context')
     ->range($offset, $size)
     ->execute();
+  /** @var \Drupal\redirect\Entity\Redirect $redirect */
   foreach (\Drupal\redirect\Entity\Redirect::loadMultiple($ids) as $redirect) {
     try {
       $redirect->save();
-    } catch (\Drupal\Core\Database\IntegrityConstraintViolationException $exception) {
+    } catch (EntityStorageException $exception) {
+      drush_log("Deleting redirect: {$redirect->redirect_source->value} -> {$redirect->redirect_redirect->value} in context {$redirect->context->value}.");
       $redirect->delete();
     }
   }
